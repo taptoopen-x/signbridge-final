@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useRef,
   useState,
 } from 'react';
@@ -28,44 +29,17 @@ import {
 
 export default function SignToText() {
 
-  /*
-   * =====================================================
-   * CAMERA
-   * =====================================================
-   */
-
   const videoRef =
     useRef<HTMLVideoElement>(null);
-
-
-  /*
-   * =====================================================
-   * SIGN RECOGNITION
-   * =====================================================
-   */
 
   const rec =
     useSignRecognition(
       videoRef
     );
 
-
-  /*
-   * =====================================================
-   * CONVERSATION
-   * =====================================================
-   */
-
   const {
     addEntry,
   } = useConversation();
-
-
-  /*
-   * =====================================================
-   * SPEECH STATE
-   * =====================================================
-   */
 
   const [
     spokenSign,
@@ -74,12 +48,8 @@ export default function SignToText() {
     null
   );
 
-
-  /*
-   * =====================================================
-   * CURRENT RECOGNIZED SIGN
-   * =====================================================
-   */
+  const lastAutomaticallySpokenSign =
+    useRef<string | null>(null);
 
   const confirmedSign =
     rec.confirmed.signId
@@ -88,13 +58,6 @@ export default function SignToText() {
         ]
       : null;
 
-
-  /*
-   * =====================================================
-   * LOW CONFIDENCE STATE
-   * =====================================================
-   */
-
   const lowConfidenceNoise =
     rec.handDetected &&
     !rec.confirmed.signId &&
@@ -102,9 +65,56 @@ export default function SignToText() {
 
 
   /*
-   * =====================================================
-   * SPEAK
-   * =====================================================
+   * Automatically speak when a NEW sign is confirmed.
+   *
+   * The same sign is not repeated continuously.
+   * Speech happens again only after another sign
+   * is recognized.
+   */
+
+  useEffect(() => {
+
+    if (!confirmedSign) {
+      return;
+    }
+
+    if (
+      lastAutomaticallySpokenSign.current ===
+      confirmedSign.id
+    ) {
+      return;
+    }
+
+    lastAutomaticallySpokenSign.current =
+      confirmedSign.id;
+
+    const speechText =
+      `This is the sign for ${confirmedSign.displayName}.`;
+
+    speak(
+      speechText
+    );
+
+    setSpokenSign(
+      confirmedSign.displayName
+    );
+
+    addEntry(
+      'SIGN_USER',
+      confirmedSign.displayName,
+      [confirmedSign.id]
+    );
+
+  }, [
+    confirmedSign,
+    addEntry,
+  ]);
+
+
+  /*
+   * Speak button:
+   * The user can press this to hear the
+   * currently recognized sign again.
    */
 
   const handleSpeak =
@@ -125,22 +135,32 @@ export default function SignToText() {
         confirmedSign.displayName
       );
 
-      addEntry(
-        'SIGN_USER',
-        confirmedSign.displayName,
-        [confirmedSign.id]
+    };
+
+
+  /*
+   * Clear the current sign and allow the
+   * same sign to be spoken automatically again.
+   */
+
+  const handleClear =
+    () => {
+
+      lastAutomaticallySpokenSign.current =
+        null;
+
+      setSpokenSign(
+        null
       );
+
+      rec.clearConfirmed();
+
     };
 
 
   return (
 
     <div className="space-y-8 pb-10">
-
-
-      {/* =================================================
-          HEADER
-          ================================================= */}
 
       <div>
 
@@ -150,34 +170,22 @@ export default function SignToText() {
 
         </h1>
 
-
         <p className="text-mist max-w-2xl">
 
           Perform a trained sign in front of the
-          camera. SignBridge tracks your hand locally,
-          recognizes the trained sign, displays the
-          result, and can speak the meaning aloud.
+          camera. SignBridge recognizes the sign,
+          displays the result, and automatically
+          speaks the meaning aloud.
 
         </p>
 
       </div>
 
 
-
-      {/* =================================================
-          MAIN AREA
-          CAMERA + IMPORTANT INFORMATION
-          ================================================= */}
-
       <div className="grid lg:grid-cols-[1.15fr_0.85fr] gap-6 items-start">
 
 
-        {/* =================================================
-            LEFT — CAMERA
-            ================================================= */}
-
         <div className="space-y-4">
-
 
           <StatusBadges
             aiReady={
@@ -238,20 +246,10 @@ export default function SignToText() {
         </div>
 
 
-
-        {/* =================================================
-            RIGHT — IMPORTANT INFORMATION
-            ================================================= */}
-
         <div className="space-y-4">
 
 
-          {/* =================================================
-              RECOGNITION RESULT
-              ================================================= */}
-
           <Card className="p-6 space-y-5">
-
 
             <div>
 
@@ -260,7 +258,6 @@ export default function SignToText() {
                 Recognition Result
 
               </p>
-
 
               <p className="text-xs text-mist mt-1">
 
@@ -271,16 +268,12 @@ export default function SignToText() {
             </div>
 
 
-
             {confirmedSign ? (
 
               <div className="space-y-4 animate-rise">
 
 
-                {/* Sign */}
-
                 <div className="flex items-center gap-4">
-
 
                   <div className="w-16 h-16 rounded-2xl bg-success/10 border border-success/20 flex items-center justify-center">
 
@@ -301,7 +294,6 @@ export default function SignToText() {
 
                     </p>
 
-
                     <p className="text-mist text-sm">
 
                       Detected Sign
@@ -313,9 +305,6 @@ export default function SignToText() {
                 </div>
 
 
-
-                {/* Confidence */}
-
                 <div>
 
                   <div className="flex items-center justify-between mb-2">
@@ -325,7 +314,6 @@ export default function SignToText() {
                       Confidence
 
                     </p>
-
 
                     <p className="text-sm text-success font-semibold">
 
@@ -362,17 +350,15 @@ export default function SignToText() {
                 </div>
 
 
-
-                {/* Meaning */}
-
                 {confirmedSign.meaning && (
 
                   <div className="rounded-xl bg-white/5 border border-white/10 p-4">
 
                     <p className="text-xs text-mist">
-                      Meaning
-                    </p>
 
+                      Meaning
+
+                    </p>
 
                     <p className="text-sm font-medium mt-1">
 
@@ -385,13 +371,13 @@ export default function SignToText() {
                 )}
 
 
-
                 {spokenSign ===
                   confirmedSign.displayName && (
 
                   <p className="text-xs text-success">
 
-                    🔊 Spoken: "This is the sign for {confirmedSign.displayName}."
+                    🔊 Automatically spoken:
+                    "This is the sign for {confirmedSign.displayName}."
 
                   </p>
 
@@ -409,7 +395,6 @@ export default function SignToText() {
                   Sign not recognized clearly
 
                 </p>
-
 
                 <p className="text-xs text-mist mt-1">
 
@@ -438,9 +423,6 @@ export default function SignToText() {
             )}
 
 
-
-            {/* No training */}
-
             {!rec.classifierReady && (
 
               <p className="text-xs text-warn bg-warn/10 border border-warn/20 rounded-lg px-3 py-2">
@@ -456,13 +438,7 @@ export default function SignToText() {
           </Card>
 
 
-
-          {/* =================================================
-              MAIN CONTROLS
-              ================================================= */}
-
           <Card className="p-5">
-
 
             <p className="text-sm font-semibold mb-3">
 
@@ -472,7 +448,6 @@ export default function SignToText() {
 
 
             <div className="flex flex-wrap gap-3">
-
 
               <Button
                 onClick={
@@ -487,7 +462,6 @@ export default function SignToText() {
                 🎥 Start Camera
 
               </Button>
-
 
 
               <Button
@@ -511,7 +485,6 @@ export default function SignToText() {
               </Button>
 
 
-
               <Button
                 variant="secondary"
 
@@ -524,17 +497,16 @@ export default function SignToText() {
                 }
               >
 
-                🔊 Speak
+                🔊 Speak Again
 
               </Button>
-
 
 
               <Button
                 variant="ghost"
 
                 onClick={
-                  rec.clearConfirmed
+                  handleClear
                 }
               >
 
@@ -547,13 +519,7 @@ export default function SignToText() {
           </Card>
 
 
-
-          {/* =================================================
-              QUICK DEMO INFO
-              ================================================= */}
-
           <Card className="p-5 bg-success/10 border-success/20">
-
 
             <p className="font-semibold text-success">
 
@@ -561,13 +527,13 @@ export default function SignToText() {
 
             </p>
 
-
             <p className="text-xs text-mist mt-2">
 
-              Keep your hand inside the camera frame and
-              perform a trained sign naturally. Once the
-              sign is recognized, press Speak to hear:
-              "This is the sign for [sign]."
+              Show a trained sign and wait for the
+              recognition result. SignBridge will
+              automatically speak the sentence.
+              Use "Speak Again" if you want to hear it
+              one more time.
 
             </p>
 
@@ -578,13 +544,7 @@ export default function SignToText() {
       </div>
 
 
-
-      {/* =================================================
-          EXTRA INFORMATION — BELOW THE MAIN AREA
-          ================================================= */}
-
       <Card className="p-6">
-
 
         <p className="font-display text-xl font-semibold">
 
@@ -595,7 +555,6 @@ export default function SignToText() {
 
         <div className="grid md:grid-cols-3 gap-4 mt-4">
 
-
           <div className="rounded-xl bg-white/5 border border-white/10 p-4">
 
             <p className="text-lg">
@@ -603,11 +562,15 @@ export default function SignToText() {
             </p>
 
             <p className="text-sm font-semibold mt-2">
+
               1. Camera
+
             </p>
 
             <p className="text-xs text-mist mt-1">
+
               The camera observes your hand gesture.
+
             </p>
 
           </div>
@@ -620,12 +583,16 @@ export default function SignToText() {
             </p>
 
             <p className="text-sm font-semibold mt-2">
+
               2. Recognition
+
             </p>
 
             <p className="text-xs text-mist mt-1">
+
               SignBridge compares the gesture with
               locally trained examples.
+
             </p>
 
           </div>
@@ -638,12 +605,16 @@ export default function SignToText() {
             </p>
 
             <p className="text-sm font-semibold mt-2">
-              3. Communication
+
+              3. Automatic Communication
+
             </p>
 
             <p className="text-xs text-mist mt-1">
-              The recognized sign is displayed and can
-              be spoken clearly to the listener.
+
+              The recognized sign is displayed and
+              automatically spoken aloud.
+
             </p>
 
           </div>
@@ -651,7 +622,6 @@ export default function SignToText() {
         </div>
 
       </Card>
-
 
     </div>
   );
