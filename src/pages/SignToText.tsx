@@ -114,16 +114,16 @@ export default function SignToText() {
         return;
       }
 
+      const speechText =
+        `This is the sign for ${confirmedSign.displayName}.`;
 
       speak(
-        confirmedSign.displayName
+        speechText
       );
-
 
       setSpokenSign(
         confirmedSign.displayName
       );
-
 
       addEntry(
         'SIGN_USER',
@@ -156,7 +156,7 @@ export default function SignToText() {
           Perform a trained sign in front of the
           camera. SignBridge tracks your hand locally,
           recognizes the trained sign, displays the
-          result, and can speak the word aloud.
+          result, and can speak the meaning aloud.
 
         </p>
 
@@ -391,7 +391,7 @@ export default function SignToText() {
 
                   <p className="text-xs text-success">
 
-                    🔊 Spoken and added to conversation history.
+                    🔊 Spoken: "This is the sign for {confirmedSign.displayName}."
 
                   </p>
 
@@ -565,8 +565,9 @@ export default function SignToText() {
             <p className="text-xs text-mist mt-2">
 
               Keep your hand inside the camera frame and
-              perform a trained sign naturally. The result
-              will appear here without needing to scroll.
+              perform a trained sign naturally. Once the
+              sign is recognized, press Speak to hear:
+              "This is the sign for [sign]."
 
             </p>
 
@@ -641,8 +642,8 @@ export default function SignToText() {
             </p>
 
             <p className="text-xs text-mist mt-1">
-              The recognized word can be displayed,
-              spoken, and added to conversation history.
+              The recognized sign is displayed and can
+              be spoken clearly to the listener.
             </p>
 
           </div>
