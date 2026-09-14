@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root { height: 100%; }
+
+body {
+  @apply bg-base-900 text-white font-body antialiased;
+  background-image: theme('backgroundImage.grid-fade');
+  background-attachment: fixed;
+}
+
+h1, h2, h3, h4 { @apply font-display; }
+
+::selection { @apply bg-signal-500/30; }
+
+.glass {
+  @apply bg-white/[0.04] backdrop-blur-xl border border-white/10;
+}
+
+.glass-strong {
+  @apply bg-base-800/80 backdrop-blur-xl border border-white/10;
+}
+
+.focus-ring {
+  @apply outline-none focus-visible:ring-2 focus-visible:ring-signal-400 focus-visible:ring-offset-2 focus-visible:ring-offset-base-900;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+.scrollbar-thin::-webkit-scrollbar { height: 6px; width: 6px; }
+.scrollbar-thin::-webkit-scrollbar-thumb { @apply bg-white/15 rounded-full; }
